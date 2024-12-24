@@ -1,0 +1,7 @@
+{
+  "messages": [
+    { "text": "Hello, this is the first message!" },
+    { "text": "Here's another message." },
+    { "text": "Here's Another Another message" }
+  ]
+}
