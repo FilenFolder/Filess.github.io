@@ -3,85 +3,77 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GitHub Message Viewer</title>
+  <title>Message Updater</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      color: #333;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
+      text-align: center;
+      margin: 20px;
     }
-
-    h1 {
-      margin-bottom: 20px;
-    }
-
     #message-board {
-      width: 90%;
+      margin: 20px auto;
       max-width: 600px;
-      background: white;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-      border-radius: 10px;
-      padding: 20px;
-      overflow-y: auto;
-      max-height: 300px;
-    }
-
-    .message {
+      border: 1px solid #ddd;
       padding: 10px;
-      margin-bottom: 10px;
+      border-radius: 5px;
       background: #f9f9f9;
+      height: 300px;
+      overflow-y: auto;
+    }
+    .message {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: #fff;
+    }
+    #new-message {
+      width: 80%;
+      padding: 10px;
+      margin: 10px 0;
       border: 1px solid #ddd;
       border-radius: 5px;
     }
-
-    button {
+    #send-button {
       padding: 10px 20px;
-      background: #007bff;
-      color: white;
+      background: #007BFF;
+      color: #fff;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      font-size: 16px;
-      margin-top: 20px;
     }
-
-    button:hover {
+    #send-button:hover {
       background: #0056b3;
     }
   </style>
 </head>
 <body>
-  <h1>GitHub Message Viewer</h1>
+  <h1>Message Viewer & Sender</h1>
+
   <div id="message-board">
-    <!-- Messages will appear here -->
+    <p>No messages yet.</p>
   </div>
-  <button id="refresh-button">Refresh Messages</button>
+
+  <textarea id="new-message" placeholder="Type your message here..."></textarea><br>
+  <button id="send-button">Send Message</button>
 
   <script>
     const messageBoard = document.getElementById('message-board');
-    const refreshButton = document.getElementById('refresh-button');
+    const newMessageBox = document.getElementById('new-message');
+    const sendButton = document.getElementById('send-button');
 
-    // GitHub Raw Content URL for the JSON file
-    const githubRawUrl = 'https://raw.githubusercontent.com/filenfolder/filess/main/messages.json';
-
-    // Function to fetch and display messages
+    // Function to load messages from the JSON file
     async function loadMessages() {
       try {
-        const response = await fetch(githubRawUrl);
-        if (!response.ok) throw new Error('Failed to fetch messages.');
+        const response = await fetch('message.json'); // Replace with GitHub raw file URL if needed
+        if (!response.ok) throw new Error('Failed to load messages.');
+
         const data = await response.json();
 
-        // Clear existing messages
+        // Clear the message board
         messageBoard.innerHTML = '';
 
-        // Display messages
+        // Add messages to the board
         data.messages.forEach((message) => {
           const messageElement = document.createElement('div');
           messageElement.classList.add('message');
@@ -89,16 +81,50 @@
           messageBoard.appendChild(messageElement);
         });
       } catch (error) {
-        console.error(error);
-        messageBoard.innerHTML = '<p>Error loading messages. Please try again later.</p>';
+        console.error('Error loading messages:', error);
+        messageBoard.innerHTML = '<p>Error loading messages.</p>';
       }
     }
 
-    // Load messages on page load
+    // Function to send a new message
+    async function sendMessage() {
+      const newMessage = newMessageBox.value.trim();
+      if (!newMessage) {
+        alert('Please type a message!');
+        return;
+      }
+
+      try {
+        // Load the existing JSON file
+        const response = await fetch('message.json');
+        if (!response.ok) throw new Error('Failed to load messages.');
+
+        const data = await response.json();
+
+        // Add the new message
+        data.messages.push({ text: newMessage });
+
+        // Send updated JSON to the server
+        await fetch('saveMessage.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        // Reload the messages and clear the text box
+        newMessageBox.value = '';
+        loadMessages();
+      } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Failed to send message.');
+      }
+    }
+
+    // Load messages when the page loads
     loadMessages();
 
-    // Refresh messages when the button is clicked
-    refreshButton.addEventListener('click', loadMessages);
+    // Add event listener to the "Send Message" button
+    sendButton.addEventListener('click', sendMessage);
   </script>
 </body>
 </html>
