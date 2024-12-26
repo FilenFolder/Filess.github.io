@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Message Updater</title>
+  <title>GitHub Message Updater</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -48,16 +48,20 @@
   </style>
 </head>
 <body>
-  <h1>Message Viewer & Sender</h1>
+  <h1>GitHub Message Viewer & Sender</h1>
 
   <div id="message-board">
-    <p>No messages yet.</p>
+    <p>Loading messages...</p>
   </div>
 
   <textarea id="new-message" placeholder="Type your message here..."></textarea><br>
   <button id="send-button">Send Message</button>
 
   <script>
+    const githubRawUrl = 'https://raw.githubusercontent.com/FilenFolder/filess/main/message.json';
+    const githubApiUrl = 'https://api.github.com/repos/FilenFolder/filess/contents/message.json';
+    const githubToken = 'Z2l0aHViX3BhdF8xMUJNNUtIUUEwMml3bzlpWVZNSTdmXzhxaDcyZzR4dlJ1ZGVQVFVheFpYeWFmbTBIMlg1cmlXNnIwQXcwWnJaVWpIRUpDVFE0RHRFTEg5Mk0x'; // Replace with your GitHub token
+
     const messageBoard = document.getElementById('message-board');
     const newMessageBox = document.getElementById('new-message');
     const sendButton = document.getElementById('send-button');
@@ -65,15 +69,14 @@
     // Function to load messages from the JSON file
     async function loadMessages() {
       try {
-        const response = await fetch('message.json'); // Replace with GitHub raw file URL if needed
-        if (!response.ok) throw new Error('Failed to load messages.');
-
+        const response = await fetch(githubRawUrl + '?' + new Date().getTime()); // Prevent caching
+        if (!response.ok) throw new Error(`Failed to fetch messages. HTTP Status: ${response.status}`);
         const data = await response.json();
 
-        // Clear the message board
+        // Clear existing messages
         messageBoard.innerHTML = '';
 
-        // Add messages to the board
+        // Display messages
         data.messages.forEach((message) => {
           const messageElement = document.createElement('div');
           messageElement.classList.add('message');
@@ -82,7 +85,7 @@
         });
       } catch (error) {
         console.error('Error loading messages:', error);
-        messageBoard.innerHTML = '<p>Error loading messages.</p>';
+        messageBoard.innerHTML = '<p>Error loading messages. Please try again later.</p>';
       }
     }
 
@@ -95,35 +98,55 @@
       }
 
       try {
-        // Load the existing JSON file
-        const response = await fetch('message.json');
-        if (!response.ok) throw new Error('Failed to load messages.');
-
+        // Fetch the current JSON file to get the existing messages
+        const response = await fetch(githubRawUrl);
+        if (!response.ok) throw new Error(`Failed to fetch messages. HTTP Status: ${response.status}`);
         const data = await response.json();
 
-        // Add the new message
+        // Add the new message to the messages array
         data.messages.push({ text: newMessage });
 
-        // Send updated JSON to the server
-        await fetch('saveMessage.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+        // Prepare the updated JSON file content
+        const updatedContent = JSON.stringify(data, null, 2);
+
+        // Get the current file's SHA (required for updating via GitHub API)
+        const fileResponse = await fetch(githubApiUrl, {
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+          },
+        });
+        if (!fileResponse.ok) throw new Error(`Failed to fetch file info. HTTP Status: ${fileResponse.status}`);
+        const fileData = await fileResponse.json();
+
+        // Update the file on GitHub
+        const updateResponse = await fetch(githubApiUrl, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: 'Update messages.json with a new message',
+            content: btoa(updatedContent), // Encode content in Base64
+            sha: fileData.sha, // Include the file's SHA
+          }),
         });
 
-        // Reload the messages and clear the text box
+        if (!updateResponse.ok) throw new Error(`Failed to update file. HTTP Status: ${updateResponse.status}`);
+
+        // Clear the text box and reload messages
         newMessageBox.value = '';
         loadMessages();
       } catch (error) {
         console.error('Error sending message:', error);
-        alert('Failed to send message.');
+        alert('Failed to send message. Please try again later.');
       }
     }
 
-    // Load messages when the page loads
+    // Load messages on page load
     loadMessages();
 
-    // Add event listener to the "Send Message" button
+    // Send a new message when the button is clicked
     sendButton.addEventListener('click', sendMessage);
   </script>
 </body>
