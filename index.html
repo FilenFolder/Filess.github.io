@@ -60,7 +60,12 @@
   <script>
     const githubRawUrl = 'https://raw.githubusercontent.com/FilenFolder/filess/main/messages.json';
     const githubApiUrl = 'https://api.github.com/repos/FilenFolder/filess/contents/messages.json';
+    
+    // Securely handle the GitHub token (NEVER hardcode it in production)
     const githubToken = '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'; // Replace with your GitHub token
+    if (!githubToken) {
+      alert('GitHub token is missing. Please configure it securely.');
+    }
 
     const messageBoard = document.getElementById('message-board');
     const newMessageBox = document.getElementById('new-message');
@@ -77,16 +82,25 @@
         messageBoard.innerHTML = '';
 
         // Display messages
-        data.messages.forEach((message) => {
-          const messageElement = document.createElement('div');
-          messageElement.classList.add('message');
-          messageElement.textContent = message.text;
-          messageBoard.appendChild(messageElement);
-        });
+        if (data.messages && data.messages.length > 0) {
+          data.messages.forEach((message) => {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.textContent = message.text;
+            messageBoard.appendChild(messageElement);
+          });
+        } else {
+          messageBoard.innerHTML = '<p>No messages to display.</p>';
+        }
       } catch (error) {
         console.error('Error loading messages:', error);
         messageBoard.innerHTML = '<p>Error loading messages. Please try again later.</p>';
       }
+    }
+
+    // Function to encode content as Base64
+    function encodeContent(content) {
+      return btoa(unescape(encodeURIComponent(content)));
     }
 
     // Function to send a new message
@@ -127,7 +141,7 @@
           },
           body: JSON.stringify({
             message: 'Update messages.json with a new message',
-            content: btoa(updatedContent), // Encode content in Base64
+            content: encodeContent(updatedContent), // Encode content in Base64
             sha: fileData.sha, // Include the file's SHA
           }),
         });
